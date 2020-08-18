@@ -1,0 +1,133 @@
+/**
+ * Beige theme for reveal.js.
+ *
+ * Copyright (C) 2011-2012 Hakim El Hattab, http://hakim.se
+ */
+
+
+// Default mixins and settings -----------------
+@import "../template/mixins";
+@import "../template/settings";
+// ---------------------------------------------
+
+
+
+// Include theme-specific fonts
+@import url(fonts/roboto/roboto.css);
+@import url(fonts/cabin/cabin.css);
+@import url(fonts/fira-mono/fira-mono.css);
+
+/* SCSS HEX */
+//$bright-maroon: #ba1645ff;
+//$mauve-taupe: #87646eff;
+//$indigo-dye: #124c70ff;
+//$queen-blue: #54689cff;
+//$light-gray: #d2d9d7ff;
+//
+///* SCSS HSL */
+//$bright-maroon: hsla(343, 79%, 41%, 1);
+//$mauve-taupe: hsla(343, 15%, 46%, 1);
+//$indigo-dye: hsla(203, 72%, 25%, 1);
+//$queen-blue: hsla(223, 30%, 47%, 1);
+//$light-gray: hsla(163, 8%, 84%, 1);
+
+/* SCSS RGB */
+$bright-maroon: rgba(186, 22, 69, 1);
+$mauve-taupe: rgba(135, 100, 110, 1);
+$indigo-dye: rgba(18, 76, 112, 1);
+$queen-blue: rgba(84, 104, 156, 1);
+$light-gray: rgba(210, 217, 215, 1);
+
+
+// Override theme settings (see ../template/settings.scss)
+$codeFont: 'Fira Mono', monospace;
+$headingFont: 'Roboto', sans-serif;
+$headingFontWeight: 700;
+$mainFont: 'Cabin', sans-serif;
+$mainColor: rgba(53, 53, 53, 1.0);
+$headingColor: rgba(53, 53, 53, 1.0);
+$headingTextShadow: none;
+$backgroundColor: $light-gray;
+$linkColor: $queen-blue;
+$linkColorHover: lighten( $linkColor, 20% );
+$selectionColor: rgba(53,53,53,1.0);
+$selectionBackgroundColor: darken( $backgroundColor, 20%);
+
+// B595E8
+// 91B6B8
+// D2D9D7
+
+// Background generator
+//@mixin bodyBackground() {
+//	@include radial-gradient( rgba(247,242,211,1), rgba(255,255,255,1) );
+//}
+
+// Theme template ------------------------------
+@import "../template/theme";
+// ---------------------------------------------
+
+.reveal pre {
+  background: rgb(29, 31, 33);
+  font-size: 0.7em;
+}
+
+.reveal pre .small {
+  background: rgb(29, 31, 33);
+  font-size: 0.5em;
+}
+
+.reveal pre code {
+  padding: 20px;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal h1 {
+  text-align: center;
+}
+
+.reveal h2 {
+  text-align: center;
+}
+
+.reveal h3 {
+  text-align: center;
+}
+
+.reveal h4 {
+  text-align: center;
+}
+
+.reveal h5 {
+  text-align: center;
+}
+
+.reveal .center-align {
+  text-align: center;
+}
+
+.reveal .left-align {
+  text-align: left;
+}
+
+.reveal .color-maroon {
+  color: $bright-maroon;
+}
+
+.reveal .color-taupe {
+  color: $mauve-taupe;
+}
+
+.reveal .color-indigo {
+  color: $indigo-dye;
+}
+
+.reveal .color-blue {
+  color: $queen-blue;
+}
+
+.reveal .color-green {
+  color: #718c00;
+}

@@ -1,0 +1,1372 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Goma Developer Tutorial</title>
+
+    <link rel="stylesheet" href="dist/reset.css">
+    <link rel="stylesheet" href="dist/reveal.css">
+    <link rel="stylesheet" href="dist/theme/wortiz.css" id="theme">
+
+    <!-- Theme used for syntax highlighted code -->
+    <link rel="stylesheet" href="plugin/highlight/tomorrow-night.css" id="highlight-theme">
+    <style>
+      .container{
+        display: flex;
+        align-items: center;
+      }
+      .col{
+        flex: 1;
+        padding: 0.5em;
+      }
+
+      .col img {
+          display: block;
+          margin-left: auto;
+          margin-right: auto;
+          width: 50%;
+      }
+      .col2{
+        flex: 2;
+        padding: 0.5em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section data-markdown>
+          <script type="text/template">
+            ## Developer Tutorial
+              ### Weston Ortiz
+          </script>
+        </section>
+        <section>  
+          <h2>Outline</h2>
+        </section>
+        <section>
+          <h4>Outline</h4>
+          Our developer tutorial topics
+          <ul>
+            <li>Adding an Equation</li>
+            <li>Types of Boundary Conditions in Goma</li>
+            <li>Adding a Neumann/Robin Condition</li>
+            <li>Adding a Material Property</li>
+            <li>Adding a Viscosity Model</li>
+            <li>Adding a Species Source</li>
+            <li>Adding a Post Processing Card</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Adding an Equation</h2>
+        </section>
+        <section style="font-size: 0.7em">
+          <h4>An example problem for a new equation</h4>
+
+          <p>
+            Due to time constraints we will be looking at adding a simple equation
+          </p>
+
+          <p>
+            The Poisson Equation:
+          </p>
+
+          \[ \Delta u = g \]
+          <p>Domain is a unit square from (0,0) to (1,1)</p>
+          <p>Source is \(g = -10 exp(-((x-0.5)^2+(y-0.5)^2)/0.02) \)
+          <p>BCs</p>
+          <ul>
+            <li> 
+          \( n\cdot \nabla u = f = sin(5x) \) on bottom and top
+            </li>
+            <li> Dirichlet \(u = 0\) on left and right</li>
+          </ul>
+
+          
+          <p style="font-size:0.5em">Borrowed from <a href="https://fenicsproject.org/docs/dolfin/1.3.0/python/demo/documented/poisson/python/documentation.html">Fenics Docs Examples</a></p>
+          
+        </section>
+        <section>
+          <h4>A New Equation in Goma</h4>
+
+          <p>
+            Due to time constraints we will be looking at adding a simple equation
+          </p>
+
+          <p>
+            The Poisson Equation:
+          </p>
+
+          \[ \Delta u = g \]
+        </section>
+        <section style="font-size:0.7em">
+          <h4>Formulation</h4>
+
+          <p>
+            Before we add equations to Goma we want to think about how
+            we formulate the equations, as an example:
+          </p>
+
+          <p>
+            The Poisson Equation has two options a single equation
+          </p>
+
+          \[ \Delta u = g \]
+
+          <p>
+            or a mixed form
+          </p>
+
+          \[ \nabla \cdot \omega = g \]
+          \[ \nabla q = \omega \]
+        </section>
+        <section style="font-size:0.7em">
+          <h4>Choosing a Formulation</h4>
+
+          <p> When picking a formulation we might want to consider things like: </p> 
+
+          <ul>
+            <li> If a formulation has advantageous boundary conditions </li>
+            <li> A formulation supports a different solution procedure that is beneficial</li>
+          </ul>
+
+          For simplicity of implementation we will choose the single equation form
+
+          \[ \Delta u = g \]
+
+        </section>
+        <section>
+          <h4>Weighted Residual</h4>
+
+          <p>
+            Equations in Goma are written in a weighted residual form
+          </p>
+          <p>
+            We should do this before we start our implementation so we
+            understand what boundary conditions might be available and
+            what we are going to be coding
+          </p>
+
+        </section>
+        <section>
+          <h4>Weighted Residual for Poisson</h4>
+
+          <p>
+            First we put our equation in a residual form representing the error. Where \(\bar{u}\) is a new variable
+          </p>
+
+          \[ R(\bar{u},x_i) = \Delta \bar{u} - g \ne 0 \]
+
+          <p>
+            Then we can approximate the equation using a weighting function and
+            integrating over the domain
+          </p>
+          \[ \int_\Omega w(x_i) R(\bar{u},x_i) dV = 0 \]
+        </section>
+        <section>
+          <h4>Weighted Residual for Poisson</h4>
+
+          Here we introduce our finite element basis function \(\bar{u} = \sum_j \phi_j u_j\):
+
+          \[ \int_\Omega w(x_i) \nabla \cdot \nabla \bar{u} - w(x_i) g \ dV = 0 \]
+
+        </section>
+        <section>
+          <h4>FEM Weighted Residual for Poisson</h4>
+
+          We interpolate our field variable using shape functions \(\bar{u} = \sum_j \phi_i u_i\):
+
+          And for Galerkin Finite element we use the same shape functions as weighting functions
+
+          \[ \int_\Omega \phi_i \nabla \cdot \nabla \bar{u} - \phi_i g \ dV = 0 \]
+
+          <p class="color-maroon">Goma does not support second derivatives using finite element shape functions, instead we integrate by parts</p>
+        </section>
+        <section style="font-size:0.6em;">
+          <h4>FEM Weighted Residual for Poisson</h4>
+
+          <div>
+
+            <p>
+              Field variable using shape functions \(\bar{u} = \sum_j \phi_j u_j, \nabla \bar{u} = \sum_j \nabla \phi_j u_j \):
+              \[ \int_\Omega \phi_i \nabla \cdot \nabla \bar{u} - \phi_i g \ dV = 0 \]
+            </p>
+
+            <p>Use divergence theorem </p>\[\int v (\nabla \cdot u) dV = \int_{dV} v (n \cdot u) d\Gamma - \int \nabla v \cdot u dV\] 
+
+            We get 
+
+
+            \[- \int_\Omega \nabla \phi_i \cdot \nabla \bar{u} - \phi_i g \ dV + \color{rgb(186, 22, 69)}{\int_{d\Omega} \phi_i n \cdot \nabla \bar{u}\ d\Gamma}  = 0 \]
+
+          </div>
+        </section>
+        <section style="font-size:0.8em;">
+          <h4>FEM weak form for Poisson, Integration by Parts</h4>
+
+          <p>Now we have our weak form</p>
+
+          \[- \int_\Omega \nabla \phi_i \cdot \nabla \bar{u} - \phi_i g \ dV + \color{rgb(186, 22, 69)}{\int_{d\Omega} n \cdot \nabla \bar{u}\ d\Gamma}  = 0 \]
+
+          <p>If we omit the boundary term we have a natural boundary condition</p>
+
+          \[- \int_\Omega \nabla \phi_i \cdot \nabla \bar{u} - \phi_i g \ dV = 0 \implies \color{rgb(186, 22, 69)}{\int_{d\Omega} \phi_i n \cdot \nabla \bar{u}\ d\Gamma  = 0} \]
+
+        </section>
+        <section>
+          <h4>Steps to add an equation</h4>
+
+          <p>Recipe with details available in <code>mm_fill_shell.c</code></p>
+          <p>Abridged version in these slides</p>
+        </section>
+        <section>
+          <h4>Step 1: Add Macros for Variable/Equation</h4>
+
+          <p><code class="color-maroon">rf_fem_const.h</code></p>
+          <p>Add macros for Poisson variable and equation</p>
+          <p>Usually we add to the end of the list of equations (might want to search and make sure names are available)</p>
+
+          <pre><code data-trim data-noescape class="c">
+            #define POISSON &lt;num&gt;
+            ...
+            #define R_POISSON &lt;num&gt;
+            #define V_LAST &lt;num+1&gt;
+          </code></pre>
+
+
+        </section>
+        <section>
+          <h3>Step 2: Adjust initializer lists</h3>
+
+          <div style="font-size: 0.75em;">
+            <p><code class="color-maroon">mm_names.h</code></p>
+            <p>Add initializations in <code>EQ_Name</code>, <code>Var_Name</code>, <code>Exo_Var_Names</code>, and <code>Var_Units</code></p>
+            <p>These are important for I/O such as exodus reading/output and special boundary conditions such as GD_PARAB</p>
+            <p>Try to be consistent, we will choose:</p>
+          </div>
+          <pre><code data-trim data-noescape class="c">
+          "POISSON" "R_POISSON" "U"
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 3: Entries for Field Variables</h4>
+          <p><code class="color-maroon">mm_as_structs.h</code></p>
+          Add entries for the following structs:
+          <pre style="font-size: 0.5em;"><code data-trim data-noescape class="c">
+          Element_Stiffness_Pointers // pointers into solution vector
+          Element_Variable_Pointers // pointers into "other" solutions (x_old) 
+          Field_Variables // Values at current iteration u^n / grad u^n
+          Diet_Field_Variables // Values at other e.g. u^(n-1) / grad u^(n-1)
+          </code></pre>
+          <code>esp-&gt;u evp-&gt;u fv-&gt;u fv-&gt;grad_u[DIM] fv-&gt;d_grad_u_dmesh[DIM][DIM][MDE]</code>
+        </section>
+        <section>
+          <h4>Step 4: Allocate space</h4>
+          <p>
+            <code class="color-maroon">mm_as_alloc.c</code>
+          </p>
+          <p>
+            We need to allocate space for 
+          </p>
+          <pre><code>Element_Stiffness_Pointers</code></pre>
+          <p>
+            if the equation is enabled.
+          </p>
+        </section>
+        <section>
+          <h4>Step 5: Load stiffness pointers</h4>
+          <p>
+            <code class="color-maroon">mm_fill_ptrs.c</code>
+          </p>
+          <p>
+            In <code class="color-indigo">load_elem_dofptr()</code> add a new call to <code class="color-indigo">load_varType_Interpolation_ptrs()</code> to populate <code>esp</code>
+          </p>
+        </section>
+        <section>
+          <h4>Step 6: load_variable</h4>
+          <p>
+            <code class="color-maroon">bc_colloc.c</code>
+          </p>
+          <p>
+            In <code class="color-indigo">load_variable()</code> add a case for your new variable
+          </p>
+        </section>
+        <section>
+          <h4>Step 7a: Equation Specification</h4>
+          <p>
+            <code class="color-maroon">mm_input.c</code>
+          </p>
+          <p>
+            In <code class="color-indigo">rd_eq_specs()</code> add <code class="color-indigo">set_eqn()</code> call for your equation
+          </p>
+          <p>
+            In <code class="color-indigo">rd_eq_specs()</code> add <code class="color-indigo">set_var()</code> call for your variable
+          </p>
+
+          These are important for the equation section in goma
+          <pre style="font-size: 0.5em;"><code data-trim data-noescape class="c">
+          EQ = momentum1   Q1 U1 Q1        1.   1.   1.   1.   1.  0.
+               equation       var          ms  adv  bnd  dif  src  por
+          </code></pre>
+
+          <p>
+            We will pick <code class="color-taupe">"poisson"</code> and <code class="color-taupe">"u"</code>
+          </p>
+        </section>
+        <section>
+          <h4>Step 7b: Equation Specification</h4>
+          <p>
+            <code class="color-maroon">mm_input.c</code>
+          </p>
+          <p>
+            Decide on equation term multipliers, for Poisson it probably makes sense to have
+            <span class="color-green">diffusion</span>, <span class="color-maroon">boundary</span>, and <span class="color-indigo">source</span> as we have 3 terms
+          </p>
+          <pre style="font-size: 0.5em;"><code data-trim data-noescape data-line-numbers=2 class="c">
+          EQ = momentum1   Q1 U1 Q1        1.   1.   1.   1.   1.  0.
+          EQ = poisson     Q1 U  Q1                  1.   1.   1. 
+               equation       var          ms  adv  bnd  dif  src  por
+          </code></pre>
+          \[- \int_\Omega \color{rgb(113, 140, 0)}{\nabla \phi_i \cdot \nabla \bar{u}} - \color{rgb(18, 76, 112)}{\phi_i g} \ dV + \int_{d\Omega} \color{rgb(186, 22, 69)}{\phi_i n \cdot \nabla \bar{u}}\ d\Gamma  = 0 \]
+
+          <p>
+          </p>
+        </section>
+        <section>
+          <h4>Step 7c: Equation Specification</h4>
+          <p>
+            <code class="color-maroon">mm_input.c</code>
+          </p>
+          <pre style="font-size: 0.5em;"><code data-trim data-noescape data-line-numbers=2 class="c">
+          EQ = poisson     Q1 U  Q1                  1.   1.   1. 
+          </code></pre>
+          <p>
+            Read in your equation term multipliers in <code class="color-indigo">rd_eq_specs()</code>
+          </p>
+        </section>
+        <section>
+          <h4>Step 8: Variable String to int</h4>
+          <p>
+            <code class="color-maroon">mm_input_util.c</code>
+          </p>
+          <p>
+            Add conversion from variable string to your declared variable in <code class="color-indigo">variable_string_to_int()</code>
+          </p>
+          <p>
+            <pre><code>"POISSON" -&gt; POISSON</code></pre>
+          </p>
+        </section>
+        <section>
+          <h4>Step 9: Set up pd</h4>
+          <p>
+            <code class="color-maroon">mm_prob_def.c</code>
+          </p>
+          <p>
+            Add lines to set member <code class="color-green">e</code> based on etm <code class="color-indigo">setup_pd()</code>
+          </p>
+          <p>
+            These are bitwise or's to enable terms, refer to many examples
+          </p>
+        </section>
+        <section>
+          <h4>Step 10a: Load Field Variables</h4>
+          <p>
+            <code class="color-maroon">mm_fill_terms.c</code>
+          </p>
+          <p>
+            Fill your field variables using <code>esp</code> <code class="color-indigo">load_fv()</code>
+          </p>
+          <p>
+            \[ \bar{u} = \sum_j \phi_j u_j \]
+          </p>
+        </section>
+        <section>
+          <h4>Step 10b: Load Field Variables</h4>
+          <p>
+            <code class="color-maroon">mm_fill_terms.c</code>
+          </p>
+          <p>
+            Fill your gradient field variables using <code>esp</code> <code class="color-indigo">load_fv_grad()</code>
+          </p>
+          <p>
+            \[ \nabla \bar{u} = \sum_j \nabla \phi_j u_j \]
+          </p>
+        </section>
+        <section>
+          <h4>Step 10c: Load Field Variables</h4>
+          <p>
+            <code class="color-maroon">mm_fill_terms.c</code>
+          </p>
+          <p>
+            Fill your mesh derivative field variables using <code>esp</code> <code class="color-indigo">load_fv_mesh_derivs()</code>
+          </p>
+          <p>
+            \[ \frac{\partial}{\partial d}\nabla \bar{u} = \sum_j \frac{\partial}{\partial d}\nabla \phi_j u_j \]
+          </p>
+        </section>
+        <section>
+          <h4>Step 11: Variable Sensitivity</h4>
+          <p>
+            <code class="color-maroon">mm_flux.c</code>
+          </p>
+          <p>
+            Add your new variable to <code class="color-indigo">load_fv_sens()</code>
+          </p>
+        </section>
+        <section>
+          <h4>Step 12: Interactions</h4>
+          <p>
+            <code class="color-maroon">mm_unknown_map.c</code>
+          </p>
+          <ol>
+            <li>
+              <p>
+                In <code class="color-indigo">set_interaction_masks()</code> add your new variable to any other variables it will have interactions with 
+              </p>
+            </li><li>
+              <p>Add a new case with interactions for your variable
+              </p>
+            </li>
+            <li>
+              <p>Mesh displacements are almost universally expected unless moving mesh will never be used
+              </p>
+            </li>
+          </ol>
+        </section>
+        <section>
+          <h4>Step 12: Add LSA mesh deriv modifications</h4>
+          <p>
+            <code class="color-maroon">ac_stability_util.c</code>
+          </p>
+          <p>
+            In <code class="color-indigo">modify_fv_mesh_derivs_for_LSA_3D_of_2D()</code> add your gradient field variable if you added mesh derivatives for a gradient 
+          </p>
+        </section>
+        <section>
+          <h4>Step 13a: Add a new Assembly function for your equation</h4>
+          <p>
+            The majority of assembly functions are in
+            <code class="color-maroon">mm_fill_terms.c</code>
+          </p>
+          <p>
+            This file is quite bloated and we want to avoid adding to that so lets create new files <code class="color-indigo">src/mm_fill_poisson.c</code> and <code class="color-indigo">include/mm_fill_poisson.h</code>
+          </p>
+        </section>
+        <section>
+          <h4>Step 13b: Add a new Assembly function for your equation</h4>
+
+          <p>
+            Add the new files to the <code class="color-maroon">Makefile</code>
+          </p>
+        </section>
+        <section>
+          <h4>Step 13c: Add a new Assembly function for your equation</h4>
+
+          <p>
+            Add a header guard to <code class="color-maroon">mm_fill_poisson.h</code> to ensure the header is only loaded once
+          </p>
+          <p>
+            Add an initial prototype for our assembly 
+          </p>
+
+          <pre><code data-trim data-noescape class="c">
+          #ifndef GOMA_MM_FILL_POISSON
+          #define GOMA_MM_FILL_POISSON
+
+          extern int assemble_poisson(void);
+
+          #endif // GOMA_MM_FILL_POISSON
+          </code></pre>
+
+
+        </section>
+        <section>
+          <h4>Step 13d: Add a new Assembly function for your equation</h4>
+
+          <p>
+            Add assembly function in <code class="color-maroon">mm_fill_poisson.c</code>
+            Include header files as needed
+          </p>
+          <pre style="font-size:0.6em;"><code data-trim data-noescape class="c">
+          #include "goma.h" // catch all would prefer 
+                            // to use required headers instead 
+                            // but can take a while by hand
+          #include "mm_as.h" // ei, pd
+          #include "mm_as_structs.h" // field variables
+          #include "mm_fill_poisson.h"
+
+          int assemble_poisson(void) {
+
+            return 0;
+          }
+          </code></pre>
+
+
+        </section>
+        <section>
+          <h4>Step 13e: Add a new Assembly function for your equation</h4>
+
+          <p style="font-size:0.8em">
+            Add Section for Residual assembly in <code class="color-maroon">mm_fill_poisson.c</code>
+          </p>
+          <pre style="font-size:0.6em;"><code data-trim data-noescape class="c">
+          int assemble_poisson(void) {
+
+            if (af-&gt;Assemble_Residual) {
+
+            }
+          </code></pre>
+
+          \[R_i = R_i -(\nabla \phi_i \cdot \nabla \bar{u} - \phi_i g ) g_{wt} d_{vol} h_3 \ \]
+          \[g = -10 exp(-((x-0.5)^2+(y-0.5)^2)/0.02) \]
+        </section>
+        <section>
+          <h4>Step 13f: Add a new Assembly function for your equation</h4>
+
+          <p style="font-size:0.8em">
+            Add Section for Jacobian assembly in <code class="color-maroon">mm_fill_poisson.c</code>
+          </p>
+          <pre style="font-size:0.6em;"><code data-trim data-noescape class="c">
+            if (af-&gt;Assemble_Jacobian) {
+          </code></pre>
+
+          \[\bar{u} = \sum_j\phi_j u_j,\ \nabla \bar{u} = \sum_j \nabla \phi_j u_j \]
+
+          \[R_i = R_i -(\nabla \phi_i \cdot \nabla \bar{u} - \phi_i g ) g_{wt} d_{vol} h_3 \ \]
+        </section>
+        <section>
+          <h4>Step 13g: Add assembly to matrix fill</h4>
+
+          <p style="font-size:0.8em">
+            Add a call to your assembly in <code class="color-maroon">mm_fill.c</code>
+          </p>
+          <pre style="font-size:0.6em;"><code data-trim data-noescape class="c">
+          if( pde[R_POISSON] ) {
+            err = assemble_poisson();
+            EH( err, "assemble_poisson");
+  #ifdef CHECK_FINITE                                    
+            err = CHECKFINITE("assemble_poisson");    
+            if (err) return -1;
+  #endif
+          }   
+          </code></pre>
+        </section>
+        <section>
+          <h4>Testing with GD BCs</h4>
+
+          <p>We can actually still test before adding boundary conditions
+            as we have GD BCs which can act as Dirichlet conditions for us.
+          </p>
+        </section>
+        <section>
+          <h4>Test 1: Laplace in X direction</h4>
+
+          <p> In a 1x1 box we use natural boundary conditions
+            on top and bottom \(n\cdot \nabla u = 0\)<p>
+          <pre style="font-size:0.5em;"><code data-trim data-noescape class="c">
+          # Right SS 2 NS 2
+          BC = GD_LINEAR SS   2   R_POISSON 0 POISSON     0   -1.0  1.0
+          # Left SS 4 NS 4
+          BC = GD_LINEAR SS   4   R_POISSON 0 POISSON     0   -2.0  1.0
+          ...
+          Number of EQ = -1
+          # disable source term
+          EQ = poisson Q1 U Q1                 1.0  1.0  0.0
+          END OF EQ
+                                      ms  adv  bnd  dif  src por
+
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Test 1: Laplace in X direction</h4>
+
+          <div class="container">
+          <div class="col">
+            <img width=60%" data-src="./images/laplace_x.png" />
+          </div>
+          </div>
+
+        </section>
+        <section>
+          <h4>Test 2: Laplace in Y direction</h4>
+
+          <p> In a 1x1 box we use natural boundary conditions
+            on left and right \(n\cdot \nabla u = 0\)<p>
+          <pre style="font-size:0.5em;"><code data-trim data-noescape class="c">
+          # Top SS 1 NS 1
+          BC = GD_LINEAR SS   1   R_POISSON 0 POISSON     0   -1.0  1.0
+          # Top SS 3 NS 3
+          BC = GD_LINEAR SS   3   R_POISSON 0 POISSON     0   -2.0  1.0
+          ...
+          Number of EQ = -1
+          # disable source term
+          EQ = poisson Q1 U Q1                 1.0  1.0  0.0
+          END OF EQ
+                                      ms  adv  bnd  dif  src por
+
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Test 2: Laplace in Y direction</h4>
+
+          <div class="container">
+          <div class="col">
+            <img width=60%" data-src="./images/laplace_y.png" />
+          </div>
+          </div>
+
+        </section>
+        <section>
+          <h4>Test 3: Poisson with Dirichlet</h4>
+
+          <p> In a 1x1 box we use natural boundary conditions
+            on top and bottom \(n\cdot \nabla u = 0\)<p>
+          <pre style="font-size:0.5em;"><code data-trim data-noescape class="c">
+          # Right SS 2 NS 2
+          BC = GD_LINEAR SS   2   R_POISSON 0 POISSON     0   -1.0  1.0
+          # Left SS 4 NS 4
+          BC = GD_LINEAR SS   4   R_POISSON 0 POISSON     0   -2.0  1.0
+          ...
+          Number of EQ = -1
+          # disable source term
+          EQ = poisson Q1 U Q1                 1.0  1.0  1.0
+          END OF EQ
+                                      ms  adv  bnd  dif  src por
+
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Test 3: Poisson with Dirichlet</h4>
+
+          <div class="container">
+          <div class="col">
+            <img width=40%" data-src="./images/poisson_gd.png" />
+          </div>
+          </div>
+
+        </section>
+        <section>
+          <h4>Step 14: Add Necessary Boundary Conditions</h4>
+
+          <p> This will bring us into our next step in the training </p>
+
+          <p> We cannot run equations without boundary conditions unless
+            they are satisfiable with natural boundary conditions</p>
+
+        </section>
+        <section>
+          <h2>Types of Boundary Conditions in Goma</h2>
+        </section>
+        <section>
+          <h4>Types of Boundary Conditions in Goma</h4>
+
+          <p> Goma contains a plethora of boundary conditions </p>
+          <p>
+            <ul>
+              <li>Dirichlet</li>
+              <li>Neumann</li>
+              <li>Robin</li>
+              <li>Many Special cases.</li>
+            </ul>
+          </p>
+        </section>
+        <section>
+          <h4>Examples of BCs: Dirichlet</h4>
+
+          <p>Dirichlet are usually pretty straight forward, we specify the value at a boundary or point</p>
+          <p>This will be the first BC we usually implement. Examples include:</p>
+          <p>
+            <ul>
+              <li><a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#uvw">U,V,W: Momentum</a></li>
+              <li><a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#t">T: Energy</a></li>
+            </ul>
+          </p>
+        </section>
+        <section style="font-size: 0.7em">
+          <h4>Examples of BCs: Neumann</h4>
+
+          <p>Neumann BCs are the second type of BCs and we specify the derivative vs. specifying the value.</p> 
+
+          <p>These are very common in FEM as we usually have an "integration by parts"  where the
+            boundary term is in the form \(n \cdot \nabla u\)<p>
+
+          <p>The natural boundary condition is often a Neumann condition where we are specifying the derivative
+            to be zero. Examples:</p>
+          <p>
+            <ul>
+              <li><a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#qside">QSIDE: Energy</a></li>
+              <li><a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#yflux-const">YFLUX_CONST: Species</a></li>
+            </ul>
+          </p>
+        </section>
+        <section>
+          <h4>Examples of BCs: Robin</h4>
+
+          <p>Robin BCs are the third type of BCs and are a combination of Dirichlet and Neumann<p>
+
+              <p>Often take a form \(n \cdot \nabla u = h(u - u_{ref})\)<p>
+
+          <p>
+            Examples:
+            <ul>
+              <li><a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#qconv">QCONV: Energy</a></li>
+              <li><a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#yflux">YFLUX: Species</a></li>
+            </ul>
+          </p>
+        </section>
+        <section style="font-size: 0.7em">
+          <h4>Strong vs Weak BCs</h4>
+
+          <p>Goma has a notion of <b>Strong</b> and <b>Weak</b> boundary conditions<p>
+          <p>
+            <ul>
+              <li><b>Strong</b>: is applied in a way such that we overwrite contributions
+                of the equation, e.g. <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#velo-normal">VELO_NORMAL</a>,  <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#kinematic">KINEMATIC</a> \[R_i = \int_{d\Omega} \text{BIG_PENALTY} (\phi^j n\cdot v - g) = 0 \]</li>
+              <li><b>Weak</b>: is instead the more typical BC where we are replacing the natural boundary condition with an integrated BC like Neumann or Robin
+                \[\int_{d\Omega} \phi_i n \cdot \nabla u = \int_{d\Omega} \phi_i f\] </li>
+            </ul>
+          </p>
+        </section>
+        <section style="font-size: 0.7em">
+          <h4>Special Cases</h4>
+
+          <p>There are a number of special cases in Goma<p>
+          <p>
+            <ul>
+              <li><b>Embedded</b>: Applied on a diffuse interface (level-set)
+                e.g. <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#ls-capillary">LS_CAPILLARY</a></li>
+              <li><b>Collocated</b>: Strong conditions at nodes, often Dirichlet-like, applied using collocation instead of Galerkin approach e.g. <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#gd-parab">GD_PARAB</a>, <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#kinematic-colloc">KINEMATIC_COLLOC</a>, <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#plane">PLANE</a></li>
+              <li><b>Special</b>: BCs which don't fit in with normal methods, <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#cap-endforce">CAP_ENDFORCE</a></li>
+              <li><b>Rotated</b>: BCs which require equations like mesh and momentum to be rotated into normal and tangential coordinate systems, <a href="https://docs.gomafem.com/problem_description_file/boundary_conditions.html#velo-normal">VELO_NORMAL</a></li>
+            </ul>
+          </p>
+        </section>
+        <section>
+          <h2>Adding a Dirichlet Condition</h2>
+        </section>
+        <section>
+          <h4>Dirichlet Condition: Step 1</h4>
+
+          Add new constant to <code class="color-maroon">rf_bc_const.h</code>
+
+          <pre><code>#define POISSON_BC &lt;uniq num&gt;</code></pre>
+        </section>
+        <section>
+          <h4>Dirichlet Condition: Step 2</h4>
+
+          Add BC to Initializer list in <code class="color-maroon">mm_names.h</code>
+
+          <pre style="font-size: 0.6em"><code data-trim data-noescape>
+          { "POISSON", "POISSON_BC", DIRICHLET, POISSON_BC, 
+            R_POISSON, SCALAR, NO_ROT, {0,...0,1}, SINGLE_PHASE, 
+            DVI_SINGLE_PHASE_DB }</code></pre>
+        </section>
+        <section>
+          <h4>Dirichlet Condition: Step 3</h4>
+
+          <p>
+            Add BC to Dirichlet BC case in <code class="color-maroon">mm_input_bc.c</code>
+          </p>
+
+          <p> You can now use the Dirichlet BC</p>
+        </section>
+        <section>
+          <h4>Test Dirichlet</h4>
+
+          <p> We can modify our previous Poisson test to now use Dirichlet instead of GD</p>
+
+          <pre style="font-size:0.5em;"><code data-trim data-noescape class="shell">
+          # Right SS 2 NS 2
+          #BC = GD_LINEAR SS   2   R_POISSON 0 POISSON     0   -1.0  1.0
+          BC = POISSON NS 2 1.0
+          # Left SS 4 NS 4
+          #BC = GD_LINEAR SS   4   R_POISSON 0 POISSON     0   -2.0  1.0
+          BC = POISSON NS 4 2.0
+          </code></pre>
+        </section>
+        <section>
+          <h4>Test Dirichlet</h4>
+          <div class="col">
+            <img width=40%" data-src="./images/poisson_gd.png" />
+          </div>
+
+        </section>
+        <section>
+          <h2>Adding a Neumann/Robin Condition</h2>
+        </section>
+        <section>
+          <h4>Neumann Condition Step 1</h4>
+
+          Add new constant to <code class="color-maroon">rf_bc_const.h</code>
+
+          <pre><code>#define POISSON_SIDE_SIN_BC &lt;uniq num&gt;</code></pre>
+        </section>
+        <section>
+          <h4>Neumann Condition Step 2</h4>
+
+          <p>
+            Add to Initializer list in <code class="color-maroon">mm_names.h</code>
+          </p>
+
+          <pre><code>#define POISSON_SIDE_SIN_BC &lt;uniq num&gt;</code></pre>
+          <pre style="font-size: 0.6em"><code data-trim data-noescape>
+          { "POISSON_SIDE_SIN", "POISSON_SIDE_SIN_BC", WEAK_INT_SURF, 
+             POISSON_SIDE_SIN_BC, R_POISSON, SCALAR, NO_ROT, {0,...0,1}, 
+             SINGLE_PHASE, DVI_SINGLE_PHASE_DB }</code></pre>
+        </section>
+        <section>
+          <h4>Neumann Condition Step 3</h4>
+
+          <p>
+            Read input in <code class="color-maroon">mm_input_bc.c</code>
+          </p>
+
+          <p>
+            We want to read five floats \(\alpha, \beta, \gamma, \omega, \zeta\)
+          </p>
+
+          \[ n\cdot \nabla u = \alpha sin(\beta x + \gamma y + \omega z) + \zeta \]
+        </section>
+        <section>
+          <h4>Neumann Condition Step 4</h4>
+
+          <p>
+            Make a new BC function in <code class="color-maroon">mm_fill_poisson.c</code>
+          </p>
+
+          \[ n\cdot \nabla u = \alpha sin(\beta x + \gamma y + \omega z) + \zeta \]
+
+          <pre style="font-size: 0.6em"><code data-trim data-noescape class="c">
+            void 
+            poisson_side_sin_bc(dbl func[DIM],
+            dbl d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+            dbl alpha, dbl beta, dbl gamma, dbl omega, dbl zeta) {...}
+
+          </code></pre>
+        </section>
+        <section>
+          <h4>Neumann Condition Step 5</h4>
+
+          <p>
+            Add declaration to header <code class="color-maroon">mm_fill_poisson.h</code>
+          </p>
+
+          <pre style="font-size: 0.6em"><code data-trim data-noescape class="c">
+            void 
+            poisson_side_sin_bc(dbl func[DIM],
+            dbl d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+            dbl alpha, dbl beta, dbl gamma, dbl omega, dbl zeta);
+          </code></pre>
+        </section>
+        <section>
+          <h4>Neumann Condition Step 6</h4>
+
+          <p>
+            Add call to switch for BC in <code class="color-maroon">bc_integ.c</code>
+          </p>
+
+          <p>
+            You can now use your Neumann BC
+          </p>
+        </section>
+        <section>
+          <h4>Test Neumann condition</h4>
+
+          <p>Top and bottom we want \(n \cdot \nabla = sin(5x)\), left and right \(u = 0\)</p>
+
+          <pre style="font-size: 0.6em"><code data-trim data-noescape class="c">
+           # Bottom SS 1 NS 1
+           BC = POISSON_SIDE_SIN SS 1 1.0 5.0 0.0 0.0 0.0
+           # Right SS 2 NS 2
+           BC = POISSON NS 2 0.0
+           # Top SS 3 NS 3
+           BC = POISSON_SIDE_SIN SS 3 1.0 5.0 0.0 0.0 0.0
+           # Left SS 4 NS 4
+           BC = POISSON NS 4 0.0
+          </code></pre>
+        </section>
+        <section>
+          <h4>Test Neumann condition</h4>
+
+          <div class="col">
+            <img width=40%" data-src="./images/poisson_full.png" />
+          </div>
+        </section>
+        <section>
+          <h4>Notes on adding other boundary conditions</h4>
+
+          <p>
+            There are many examples, usually the first thing you should look
+            for is a near-by example.
+          </p>
+          <p>
+            Adding a <b>Strong</b> condition should be the same as Neumann only
+            now you are using <b>STRONG_INT_SURF</b> in <code>mm_names.h</code>,
+            they are still called in <code class="color-indigo">apply_integrated_bc()</code>
+          </p>
+          <p>
+            Other BCs should follow a similar process but may not be added to <code class="color-maroon">bc_integ.c</code>
+            but <code class="color-maroon">bc_colloc.c</code> or one of the other BC files
+          </p>
+        </section>
+        <section>
+          <h2>Adding a Material Property</h2>
+        </section>
+        <section>
+          <h4>Adding a Material Property</h4>
+
+          <p> Material properties are added so that we do not have to hard code values
+            in our assemblies.</p>
+
+          <p> For our Poisson equation we will add a <code>Poisson Source</code> card
+            which lets us read in either a constant (which would be useful to set to 0 for Laplace Equation)
+            and our exponential source term</p>
+        </section>
+        <section>
+          <h4>Step 1: Material Property</h4>
+
+          <code class="color-maroon">mm_mp_structs.h</code>
+
+          <p>
+            Add needed values to <code class="color-green">struct Material_Properties</code>
+          </p>
+          <pre style="font-size: 0.6em"><code data-trim data-noescape>
+          dbl poisson_source;  
+          int poissonSourceModel; 
+          int len_u_poisson_source;
+          dbl *u_poisson_source;
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Step 2: Material Property</h4>
+
+          <code class="color-maroon">dp_vif.c</code>
+
+          <p>
+            Add communication of the material properties to the various functions
+          </p>
+
+          <p>There are many examples</p>
+
+          <p>If you have an allocation make sure that is communicated and allocated on all processors</p>
+        </section>
+        <section>
+          <h4>Step 3: Material Property</h4>
+
+          <code class="color-maroon">mm_mp_const.h</code>
+
+          <p>
+            Add new constant for your model
+          </p>
+          <pre style="font-size: 0.6em"><code data-trim data-noescape>
+          // CONSTANT is 1 so we do not want to use that to differentiate
+          #define POISSON_EXP 0
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Step 4a: Material Property</h4>
+
+          <code class="color-maroon">mm_input_mp.c</code>
+
+          <p>Read in your new material property</p>
+
+          <p>By default <code class="color-indigo">look_for_mat_prop()</code> will look for CONSTANT
+            properties so we only need to add special cases</p>
+        </section>
+        <section style="font-size: 0.5em">
+          <h4>Step 4b: Material Property</h4>
+
+          <code class="color-maroon">mm_input_mp.c</code>
+          <p>Source is \(g = \alpha exp(-((x-\beta)^2+(y-\gamma)^2 + (z-\omega)^2))/\zeta) \)
+            so we want 5 constants \(\alpha,\beta,\gamma,\omega,\zeta\)</p>
+
+          <pre ><code data-trim data-noescape>
+          
+           if ( !strcmp(model_name, "EXP") )
+             {
+             poissonSourceModel = POISSON_EXP;
+             model_read = 1;
+             mat_ptr->poissonSourceModel = PoissonSourceModel;
+             num_const = read_constants(imp, &(mat_ptr->u_poisson_source), 
+               			     NO_SPECIES);
+             if (num_const != 5) {
+               EH(-1, "Expected 5 constants for Poisson Source = EXP");
+             }
+          </code></pre>
+          
+        </section>
+        <section>
+          <h4>Step 5: Material Property</h4>
+
+          <p>
+            Finally you should be able to integrate your new property into your function
+          </p>
+
+          <p>Make sure to check the Model type that was read in</p>
+
+          <p>We will add a new function to <code class="color-maroon">mm_fill_poisson.c</code>
+          <pre style="font-size: 0.5em"><code data-trim data-noescape>
+          //double poisson_source(POISSON_DEPENDENCE_STRUCT *d_source);
+          double poisson_source(void);
+          </code></pre>
+        </section>
+        <section>
+          <h4>Test Material Property</h4>
+
+          <p>Test with a constant source</p>
+          <pre style="font-size: 0.5em"><code data-trim data-noescape>
+          Poisson Source = CONSTANT 1.0
+          </code></pre>
+          <pre style="font-size: 0.5em"><code data-trim data-noescape>
+          # Right
+          BC = POISSON NS 2 0.0
+          # Left
+          BC = POISSON NS 4 0.0
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Test Material Property</h4>
+
+          <div class="container">
+          <div class="col">
+          <img width=40% data-src="./images/poisson_source_constant.png" />
+          </div>
+          </div>
+
+        </section>
+        <section>
+          <h4>Test 2 Material Property</h4>
+
+          <p>Test with a constant source</p>
+          <pre style="font-size: 0.5em"><code data-trim data-noescape>
+          Poisson Source = EXP -10.0 0.5 0.5 0.0 0.02
+          </code></pre>
+          <pre style="font-size: 0.5em"><code data-trim data-noescape>
+           BC = POISSON_SIDE_SIN SS 1 1.0 5.0 0.0 0.0 0.0
+           BC = POISSON NS 2 0.0
+           BC = POISSON_SIDE_SIN SS 3 1.0 5.0 0.0 0.0 0.0
+           BC = POISSON NS 4 0.0
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Test 2 Material Property</h4>
+
+          <div class="container">
+          <div class="col">
+          <img width=40% data-src="./images/poisson_full.png" />
+          </div>
+          </div>
+
+        </section>
+        <section>
+          <h2>Adding a Viscosity Model</h2>
+        </section>
+        <section>
+          <h4>Adding a Viscosity Model</h4>
+
+          <p>Viscosity Models are typically added for Generalized Newtonian Fluids, though in some
+            cases they could be added for Viscoelastic models with non-constant viscosity, or special
+          cases where viscosity depends on more than the shear rate</p>
+
+          <p>Examples of models: <a href="https://docs.gomafem.com/material_file/mechanical_and_constitutive.html#liquid-constitutive-equation">Goma docs on Liquid Constitutive Equation</a></p>
+
+        </section>
+        <section>
+          <h4>Adding a Viscosity Model</h4>
+
+          <p> For our example today we are going to add a 4-parameter Cross model</p>
+
+          \[ \mu(\dot{\gamma})=\mu_\inf + \frac{\mu_0-\mu_\inf}{1 + (\lambda \dot{\gamma})^{1-n}} \]
+
+        </section>
+        <section>
+          <h4>Step 1: Adding a Viscosity Model</h4>
+
+          <code class="color-maroon">mm_mp_const.h</code>
+
+          <p>Add a new define for your Constitutive Model</p>
+
+          <pre><code>#define CROSS_VISCOSITY &lt;uniq num&gt;</code></pre>
+
+        </section>
+        <section>
+          <h4>Step 2a: Adding a Viscosity Model</h4>
+
+          <code class="color-maroon">mm_input_mp.c</code>
+
+          <p>Read in parameters for your new model</p>
+
+          <pre><code>else if (!strcmp(model_name, "CROSS"))</code></pre>
+
+        </section>
+        <section>
+          <h4>Step 2a: Adding a Viscosity Model</h4>
+
+          <code class="color-maroon">mm_input_mp.c</code>
+
+          <p>Read in parameters for your new model, add to cases </p>
+          \[ \mu(\dot{\gamma})=\mu_\inf + \frac{\mu_0-\mu_\inf}{1 + (\lambda \dot{\gamma})^{1-n}} \]
+
+          <pre style="font-size:0.6em;"><code data-trim class="c">
+            "Low Rate Viscosity"
+            "Power Law Exponent"
+            "High Rate Viscosity"
+            "Time Constant"
+          </code></pre>
+
+        </section>
+        <section>
+          <h4>Step 3: Adding a Viscosity Model</h4>
+
+          <code class="color-maroon">mm_viscosity.c</code>
+
+          <p>Add a new function to calculate your viscosity</p>
+
+          <pre style="font-size:0.6em;"><code data-trim class="c">
+            dbl
+            cross_viscosity(struct Generalized_Newtonian *gn_local,
+                            dbl gamma_dot[DIM][DIM], /* strain rate */
+                            VISCOSITY_DEPENDENCE_STRUCT *d_mu )
+          </code></pre>
+          \[ \mu(\dot{\gamma})=\mu_\inf + \frac{\mu_0-\mu_\inf}{1 + (\lambda \dot{\gamma})^{1-n}} \]
+
+        </section>
+        <section>
+          <h4>Step 4: Adding a Viscosity Model</h4>
+
+          <code class="color-maroon">mm_viscosity.c</code>
+
+          <p>Add your viscosity to the <code class="color-indigo">viscosity()</code> function</p>
+
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+            else if (gn_local->ConstitutiveEquation == CROSS_VISCOSITY) 
+              { 
+                mu = cross_viscosity(gn_local, gamma_dot, d_mu); 
+              }
+          </code></pre>
+          <p> You should now be able to use your new model</p>
+        </section>
+        <section>
+          <h4>Test Viscosity Model</h4>
+
+          \[ \mu(\dot{\gamma})=\mu_\inf + \frac{\mu_0-\mu_\inf}{1 + (\lambda \dot{\gamma})^{1-n}} \]
+
+          <pre style="font-size: 0.5em"><code data-trim data-noescape>
+            Liquid Constitutive Equation    = CROSS
+            Low Rate Viscosity              = CONSTANT      1.0
+            Power Law Exponent              = CONSTANT      0.33
+            High Rate Viscosity             = CONSTANT      1e-3
+            Time Constant                   = CONSTANT      2.0
+          </code></pre>
+        </section>
+        <section>
+          <h4>Test Viscosity Model</h4>
+
+          <div class="container">
+          <div class="col">
+          <img data-src="./images/visc.png" />
+          </div>
+          </div>
+
+        </section>
+        <section>
+          <h2>Adding a Species Source</h2>
+        </section>
+        <section>
+          <h4>Species Equations</h4>
+
+          <p> Species equations are a special case in Goma </p>
+
+          <p> They offer a way to use any number of generic advection-diffusion-reaction equations
+            in addition to offering some useful tools for managing concentrations</p>
+
+          \[\frac{\partial c}{\partial t} + u \cdot \nabla c + \nabla \cdot D \nabla c = S \]
+        </section>
+        <section>
+          <h4>Species Source Example</h4>
+
+          <p>For our example we will add two sources for the Schnakenberg reactive model</p>
+
+          \[ \frac{\partial u}{\partial t} + w \cdot \nabla u - \nabla^2 u = \gamma (a - u + u^2v) \]
+          \[ \frac{\partial v}{\partial t} + w \cdot \nabla v - d \nabla^2 v = \gamma (b - u^2v) \]
+        </section>
+        <section>
+          <h4>Step 1: Adding a Species Source</h4>
+          <code class="color-maroon">mm_mp_const.h</code>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+            #define SCHNAKENBERG_U &lt;uniq num&gt;
+            #define SCHNAKENBERG_V &lt;uniq num&gt;
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 2: Adding a Species Source</h4>
+          <code class="color-maroon">mm_input_mp.c</code>
+          <p>Read in species source parameters, we can read in \(\gamma\), \(a\) for
+            the \(u\) equation and \(b\) for the \(v\) equation.
+          \[ \frac{\partial u}{\partial t} + w \cdot \nabla u - \nabla^2 u = \gamma (a - u + u^2v) \]
+          \[ \frac{\partial v}{\partial t} + w \cdot \nabla v - d \nabla^2 v = \gamma (b - u^2v) \]
+        </section>
+        <section>
+          <h4>Step 3: Adding a Species Source</h4>
+          <code class="color-maroon">mm_std_models.c</code>
+          <p>
+            Add new functions to calculate your species sources, should be quite a few examples available
+          </p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+            double schnakenberg_u_source(int species_no, double *derivatives);
+            double schnakenberg_v_source(int species_no, double *derivatives);
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 4: Adding a Species Source</h4>
+          <code class="color-indigo">get_continuous_species_terms()</code>
+          <p>Usually use another species source as an example</p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+            else if (mp-&lt;SpeciesSourceModel[w]  == SCHNAKENBERG_U )
+              {
+
+              }
+          </code></pre>
+        </section>
+        <section>
+          <h4>Schnakenberg test problem</h4>
+          <p> We've initialized a mesh with \(a = 0.1, b=0.9, d=8.6676, \gamma = 230.82\): </p>
+          \[ (u,v) = \left(a+b + \epsilon(a+b), \frac{b}{(a+b)^2} + \epsilon\frac{b}{(a+b)^2}\right) \]
+
+          <p>Where \(\epsilon\) is a random perturbation of max \(10\%\) varying at nodes</p>
+          <p style="font-size:0.5em;">Ref: <a href="https://www.sciencedirect.com/science/article/pii/S0307904X11008298">https://www.sciencedirect.com/science/article/pii/S0307904X11008298</a></p>
+        </section>
+        <section>
+          <h4>Schnakenberg test problem</h4>
+          <div class="container">
+          <div class="col">
+          <img data-src="./images/spec_steady.png" />
+          </div>
+          </div>
+        </section>
+        <section>
+          <h4>Schnakenberg test problem</h4>
+          <p> We can add flow with a lid driven cavity,
+            using the previous solution as an initial guess</p>
+          <p> Now we can see that we get the advection 
+            for free as well when using species</p>
+        </section>
+        <section>
+          <h4>Schnakenberg test problem</h4>
+          <div class="container">
+          <div class="col">
+          <img data-src="./images/spec_flow.png" />
+          </div>
+          </div>
+        </section>
+        <section>
+          <h2>Adding a Post Processing Card</h2>
+        </section>
+        <section>
+          <h4>Step 1: Adding a Post Processing Card</h4>
+          <code class="color-maroon">mm_post_def.h</code>
+          <p> Add declaration of new variable </p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+            extern int TOTAL_SPECIES;
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 2: Adding a Post Processing Card</h4>
+          <code class="color-maroon">mm_post_proc.c</code>
+          <p> Add instantiation of new variable </p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+            int TOTAL_SPECIES;
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 3: Adding a Post Processing Card</h4>
+          <code class="color-maroon">mm_post_proc.c</code>
+          <p> Read input for new variable in 
+            <code class="color-indigo">rd_post_process_specs()</code> </p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+          iread = look_for_post_proc(ifp, "Total Species", &TOTAL_SPECIES, '\n');
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 4: Adding a Post Processing Card</h4>
+          <code class="color-maroon">mm_post_proc.c</code>
+          <p> Setup variable in exodus II database
+            <code class="color-indigo">load_nodal_tkn()</code> </p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+          if ( TOTAL_SPECIES != -1 && Num_Var_In_Type[MASS_FRACTION])
+             {
+                set_nv_tkud(rd, index, 0, 0, "TY","[1]", "TOTAL_SPECIES", FALSE);
+                index++;
+                TOTAL_SPECIES = index_post;
+                index_post++;
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 5: Adding a Post Processing Card</h4>
+          <code class="color-maroon">dp_vif.c</code>
+          <p> Add flag to distributed communication</p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+          ddd_add_member(n, &TOTAL_SPECIES, 1, MPI_INT);
+          </code></pre>
+        </section>
+        <section>
+          <h4>Step 5: Adding a Post Processing Card</h4>
+          <code class="color-maroon">mm_post_proc.c</code>
+          <p> Add algorithm to calculate post proc value
+            <code class="color-indigo">post_process_nodal()</code> </p>
+          <pre style="font-size:0.5em;"><code data-trim class="c">
+              if (TOTAL_SPECIES != -1 && pd->e[MASS_FRACTION] ){
+                double total = 0;
+                for (int i = 0; i < pd->Num_Species; i++) {
+                  total += fv->c[i];
+                }
+                local_post[TOTAL_SPECIES] = total;
+                local_lumped[TOTAL_SPECIES] = 1.;
+              }
+
+          </code></pre>
+        </section>
+
+      </div>
+    </div>
+
+    <script src="dist/reveal.js"></script>
+    <script src="plugin/notes/notes.js"></script>
+    <script src="plugin/markdown/markdown.js"></script>
+    <script src="plugin/highlight/highlight.js"></script>
+    <script src="plugin/math/math.js"></script>
+    <script>
+      // More info about initialization & config:
+      // - https://revealjs.com/initialization/
+      // - https://revealjs.com/config/
+      Reveal.initialize({
+        hash: true,
+        slideNumber: true,
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/gh/mathjax/mathjax@2.7.8/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          // pass other options into `MathJax.Hub.Config()`
+          TeX: { Macros: { RR: "{\\bf R}" },
+            autoload: {
+              color: [],
+              colorV2: ['color']
+            }
+          }
+        },
+
+        // Learn about plugins: https://revealjs.com/plugins/
+        plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath ]
+      });
+    </script>
+  </body>
+</html>

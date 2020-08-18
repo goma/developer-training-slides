@@ -1,0 +1,56 @@
+/* cabin-regular - latin */
+@font-face {
+  font-family: 'Cabin';
+  font-style: normal;
+  font-weight: 400;
+  src: url('cabin-v14-latin-regular.eot'); /* IE9 Compat Modes */
+  src: local('Cabin'), local('Cabin-Regular'),
+       url('cabin-v14-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('cabin-v14-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+       url('cabin-v14-latin-regular.woff') format('woff'), /* Modern Browsers */
+       url('cabin-v14-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('cabin-v14-latin-regular.svg#Cabin') format('svg'); /* Legacy iOS */
+}
+
+/* cabin-italic - latin */
+@font-face {
+  font-family: 'Cabin';
+  font-style: italic;
+  font-weight: 400;
+  src: url('cabin-v14-latin-italic.eot'); /* IE9 Compat Modes */
+  src: local('Cabin Italic'), local('Cabin-Italic'),
+       url('cabin-v14-latin-italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('cabin-v14-latin-italic.woff2') format('woff2'), /* Super Modern Browsers */
+       url('cabin-v14-latin-italic.woff') format('woff'), /* Modern Browsers */
+       url('cabin-v14-latin-italic.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('cabin-v14-latin-italic.svg#Cabin') format('svg'); /* Legacy iOS */
+}
+
+/* cabin-600 - latin */
+@font-face {
+  font-family: 'Cabin';
+  font-style: normal;
+  font-weight: 600;
+  src: url('cabin-v14-latin-600.eot'); /* IE9 Compat Modes */
+  src: local('Cabin SemiBold'), local('Cabin-SemiBold'),
+       url('cabin-v14-latin-600.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('cabin-v14-latin-600.woff2') format('woff2'), /* Super Modern Browsers */
+       url('cabin-v14-latin-600.woff') format('woff'), /* Modern Browsers */
+       url('cabin-v14-latin-600.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('cabin-v14-latin-600.svg#Cabin') format('svg'); /* Legacy iOS */
+}
+
+/* cabin-600italic - latin */
+@font-face {
+  font-family: 'Cabin';
+  font-style: italic;
+  font-weight: 600;
+  src: url('cabin-v14-latin-600italic.eot'); /* IE9 Compat Modes */
+  src: local('Cabin SemiBold Italic'), local('Cabin-SemiBoldItalic'),
+       url('cabin-v14-latin-600italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('cabin-v14-latin-600italic.woff2') format('woff2'), /* Super Modern Browsers */
+       url('cabin-v14-latin-600italic.woff') format('woff'), /* Modern Browsers */
+       url('cabin-v14-latin-600italic.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('cabin-v14-latin-600italic.svg#Cabin') format('svg'); /* Legacy iOS */
+}
+

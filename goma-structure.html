@@ -1,0 +1,309 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Structure of Goma</title>
+
+    <link rel="stylesheet" href="dist/reset.css">
+    <link rel="stylesheet" href="dist/reveal.css">
+    <link rel="stylesheet" href="dist/theme/wortiz.css" id="theme">
+
+    <!-- Theme used for syntax highlighted code -->
+    <link rel="stylesheet" href="plugin/highlight/tomorrow-night.css" id="highlight-theme">
+    <style>
+      .container{
+          display: flex;
+          align-items: center;
+      }
+      .col{
+          flex: 1;
+          padding: 0.5em;
+      }
+      .col2{
+          flex: 2;
+          padding: 0.5em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section data-markdown>
+            <script type="text/template">
+              ## Structure of Goma
+              ### Weston Ortiz
+            </script>
+        </section>
+        <section>  
+          <h2>Directory layout</h2>
+          <pre style="font-size: 0.5em"><code data-trim data-noescape class="shell">
+    |-- cmake                 # CMake modules
+    |-- CMakeLists.txt        # CMake configuration
+    |-- docs                  # docs, has some undocumented things 
+    |-- include               # Include files in here
+    |   |-- ac_conti.h
+    |   |-- ...
+    |   |-- brkfix
+    |   |   |-- bbb.h
+    |   |   |-- ...
+    |-- LICENSE               # Open source license
+    |-- scripts               # build scripts, some postproc utilities
+    |-- src                   # Source files (c/cpp/fortran files)
+        |-- ac_conti.c
+        |-- ...
+        |-- brkfix
+        |   |-- bbb.c
+        |   |-- ...
+          </code></pre>
+        </section>
+        <section>
+          <h4> File naming convention</h4>
+
+          <ul>
+            <li><code class="color-maroon">ac_</code> Augmenting condition</li>
+            <li><code class="color-maroon">bc_</code> Boundary condition</li>
+            <li><code class="color-maroon">dp_</code> Distributed Processing</li>
+            <li><code class="color-maroon">el_</code> element (num nodes, gauss points, etc...)</li>
+            <li><code class="color-maroon">loca_</code> builtin loca library</li>
+            <li><code class="color-maroon">mm_</code> Moving mesh (more of a catch all)</li>
+            <li><code class="color-maroon">rd_/wr_</code> I/O read/write </li>
+            <li><code class="color-maroon">rf_</code> Reacting flow (historical name from <code>rf_salsa</code>, which Goma was forked)</li>
+            <li><code class="color-maroon">sl_</code> Interfaces to solvers like Trilinos</li>
+            <li><code class="color-maroon">user_</code> user routines, less used now</li>
+          </ul>
+
+        </section>
+        <section>
+          <h4> Where to look for files </h4>
+          <ul>
+            <li><code class="color-maroon">mm_input*</code> Input for equations,BCs,materials</li>
+            <li><code class="color-maroon">mm_fill_*</code> Assembly functions (Equations)</li>
+            <li><code class="color-maroon">rf_*</code> Older basic finite element routines like shape functions</li>
+            <li><code class="color-maroon">rf_solve.c</code> Steady and Transient solver </li>
+          </ul>
+
+        </section>
+        <section>
+          <h4>Files with models</h4>
+            <ul>
+              <li><code class="color-maroon">mm_post_proc.c</code> Post Processing </li>
+              <li><code class="color-maroon">mm_fill_terms.c</code> Many assembly functions </li>
+              <li><code class="color-maroon">mm_viscosity.c</code> Viscosity models</li>
+              <li><code class="color-maroon">mm_std_models.c</code> Many source models</li>
+              <li><code class="color-maroon">mm_flux.c</code> Flux and Volume integration </li>
+              <li><code class="color-maroon">mm_fill_species.c</code> Species BCs and equation</li>
+            <li><code class="color-maroon">mm_ns_bc.c</code> Integrated BCs</li>
+            </ul>
+        </section>
+        <section>
+          <h4>Flow of Goma</h4>
+            <img style="margin: 0" data-src="./images/flow.svg" />
+        </section>
+        <section data-markdown>
+          #### Tools for exploring Goma
+          
+          The number one tool you want to have is some kind of global search
+          
+          - QtCreator / VSCode / IDE's generally will have this built-in
+          - Ripgrep is usually faster than grep and has nice defaults and output (https://github.com/BurntSushi/ripgrep)
+          - If none of those are available `git-grep` is your friend (https://git-scm.com/docs/git-grep)
+          - silver searcher, ack, other grep like tools
+        </section>
+        <section>
+          <h4>Grep example</h4>
+
+          <pre><code data-trim>
+          $ grep -R "fluid_stress"
+          $ git grep "fluid_stress"
+          $ rg "fluid_stress"
+          </code></pre>
+          
+        </section>
+        <section data-markdown>
+          ## Function Reference of Goma
+        </section>
+        <section>
+          <h4>Function Reference of Goma: I/O</h4>
+          <ul>
+          <li><b>I/O and General Setup:</b>
+            <ul>
+              <li><code class="color-maroon">translate_command_line()</code>: command line arguments like <code class="color-maroon">-a</code>, <code class="color-maroon">-i</code>, <code class="color-maroon">-brk</code></li>
+              <li><code class="color-maroon">pd_alloc(),...*_alloc</code>: global allocations....</li>
+              <li><code class="color-maroon">read_input_file()</code>: Reads the input file (problem setup, enabled equations, time stepping)
+                <ul>
+                  <li><code class="color-maroon">rd_bc_specs()</code>: Read boundary conditions</li>
+                  <li><code class="color-maroon">rd_mp_specs()</code>: Read material properties</li>
+                  <li><code class="color-maroon">rd_post_process_specs()</code>: Read Post Processing</li>
+                  <li>Quite a few more take a look at read_input_file</li>
+            </ul></li>
+            </ul></li>
+          </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Parallel</h4>
+            <ul>
+              <li><code class="color-maroon">noahs_raven()</code> Share some initial information with other processors</li>
+              <li><code class="color-maroon">raven_landing()</code> Using above allocate structures on all processors</li>
+              <li><code class="color-maroon">noahs_ark()</code> Share information from Proc 0 to all other processors</li>
+              <li><code class="color-maroon">ark_landing()</code> Allocate space for structures based on above</li>
+              <li><code class="color-maroon">noahs_dove</code> send information from Proc 0 to all other processors</li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Solution Process</h4>
+            <ul>
+              <li><code class="color-maroon">solve_problem()</code> Transient and Steady state solution</li>
+              <li><code class="color-maroon">continue_problem()</code> Generic Continuation</li>
+              <li><code class="color-maroon">hunt_problem()</code> Hunting continuation</li>
+              <li><code class="color-maroon">do_loca()</code> Solutions using built-in loca library</li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Sparse Matrices</h4>
+          Usually setup in Solution Process functions like <code>solve_problem</code>
+            <ul>
+              <li><code class="color-maroon">alloc_MSR_sparse_arrays()</code> MSR matrix</li>
+              <li><code class="color-maroon">alloc_VBR_sparse_arrays()</code> VBR matrix</li>
+              <li><code class="color-maroon">EpetraCreateRowMatrix()</code> Epetra CSR</li>
+              <li><code class="color-maroon">EpetraCreateGomaProblemGraph()</code> Epetra problem graph</li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Solution Vectors</h4>
+          Usually setup in Solution Process functions like <code>solve_problem</code>
+            <ul>
+              <li><code class="color-maroon">x</code> Solution Vector
+              <li><code class="color-maroon">x_old</code> Previous solution
+              <li><code class="color-maroon">xdot</code> Time derivative
+              <li><code class="color-maroon">x_older</code> Previous Previous solution
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Adaptive timestepping</h4>
+          In <code>solve_problem()</code>
+            <ul>
+              <li><code class="color-maroon">predict_solution()</code> Update initial guess for next time step with explicit step, setup xdot 
+              <li><code class="color-maroon">time_step_control()</code> Restrictions on time step size based on predicted solution
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Nonlinear solve</h4>
+              <code class="color-maroon">solve_nonlinear_problem</code> Solves the nonlinear problem using Newton's method, in here we have a newton loop and call assembly and solve functions
+                \[\begin{aligned}
+                \mathbf{J}(x, \dot{x}) \Delta x = - \mathbf{R}(x, \dot{x}) \\
+                x = x_{old} + \Delta x
+  \end{aligned} \]
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Assembly Process</h4>
+          In <code>solve_nonlinear_problem()</code>
+            <ul>
+              <li><code class="color-maroon">matrix_fill_full()</code> Element Loop<ul>
+                  <li><code class="color-maroon">matrix_fill()</code> Element contributions, contains almost everything used for the finite element assembly<ul>
+                      <li>loading basis functions</li>
+                      <li>loading field variables</li>
+                      <li>element residuals and Jacobians</li>
+                      <li>boundary conditions</li>
+                      
+                    </li>
+                </ul></li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Fill deep dive</h4>
+            <ul>
+             <li><code class="color-maroon">matrix_fill()</code> Element contributions<ul>
+                 <li><code class="color-maroon">load_elem_dofptr()</code> loads <code>esp</code> from solution vectors<ul>
+                     <li><code class="color-maroon">load_ei</code></li> loads <code>ei</code> which contains DOF info and element information
+                   </ul></li>
+                </ul></li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Fill deep dive</h4>
+          In <code>matrix_fill()</code>
+            <ul>
+             <li>Gauss Loop
+               <ul>
+                 <li><code class="color-maroon">load_basis_functions()</code> loads basis functions \(\phi_i\), \(\frac{d\phi_i}{d\xi_d}\)</li> 
+                 <li><code class="color-maroon">beer_belly()</code> loads element Jacobians, \(J_{el}\), \(|J_{el}|\), \(B\)</li> 
+                 <li><code class="color-maroon">load_fv()</code> load field variables \(u = \sum_j \phi_j u_j\)</li>
+                 <li><code class="color-maroon">load_bf_grad()</code> loads basis gradients \(\nabla \phi_i\)</li>
+                 <li><code class="color-maroon">load_fv_grads()</code> load field gradients \(\nabla u = \sum_j \nabla \phi_j u_j\)</li>
+               </ul>
+             </li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Fill deep dive</h4>
+          In <code>matrix_fill()</code>
+            <ul>
+             <li>Gauss Loop continued
+               <ul>
+                 <li><code class="color-maroon">assemble_*()</code> Compute Element Residual and Jacobian for equation</li>
+                 <li><code class="color-maroon">assemble_momentum()</code> NS Momentum</li>
+                 <li><code class="color-maroon">assemble_continuity()</code> NS Continuity</li>
+                 <li><code class="color-maroon">assemble_energy()</code> Energy equation</li>
+                 <li><code class="color-maroon">assemble_mass_transport()</code> Species equations</li>
+
+               </ul>
+             </li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Fill deep dive</h4>
+          In <code>matrix_fill()</code>
+            <ul>
+             <li>After Gauss loop (highlights)
+               <ul>
+                 <li><code class="color-maroon">apply_embedded_bc()</code> LS boundary conditions</li>
+                 <li><code class="color-maroon">apply_integrated_bc()</code> Strong and Weak integrated BCs</li>
+                 <li><code class="color-maroon">apply_point_colloc_bc()</code> Collocated BCs (at nodes)</li>
+                 <li><code class="color-maroon">put_dirichlet_in_matrix()</code>Zero rows and puts 1 on diagonal for Dirichlet</li>
+               </ul>
+             </li>
+            </ul>
+        </section>
+        <section>
+          <h4>Function Reference of Goma: Fill deep dive</h4>
+          In <code>matrix_fill()</code>
+            <ul>
+             <li>After Gauss loop (highlights)
+               <ul>
+                 <li><code class="color-maroon">load_lec()</code> Local element contributions into global:
+                   \(J(global_i,global_j) += lec_J(i,j)\), \(R(global_i) += lec_R(i)\)</li>
+               </ul>
+             </li>
+            </ul>
+        </section>
+      </div>
+    </div>
+
+    <script src="dist/reveal.js"></script>
+    <script src="plugin/notes/notes.js"></script>
+    <script src="plugin/markdown/markdown.js"></script>
+    <script src="plugin/highlight/highlight.js"></script>
+    <script src="plugin/math/math.js"></script>
+    <script>
+      // More info about initialization & config:
+      // - https://revealjs.com/initialization/
+      // - https://revealjs.com/config/
+      Reveal.initialize({
+        hash: true,
+        slideNumber: true,
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/gh/mathjax/mathjax@2.7.8/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          // pass other options into `MathJax.Hub.Config()`
+          TeX: { Macros: { RR: "{\\bf R}" } }
+        },
+
+        // Learn about plugins: https://revealjs.com/plugins/
+        plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath ]
+      });
+    </script>
+  </body>
+</html>

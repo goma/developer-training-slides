@@ -1,0 +1,485 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Git for Goma Developers</title>
+
+    <link rel="stylesheet" href="dist/reset.css">
+    <link rel="stylesheet" href="dist/reveal.css">
+    <link rel="stylesheet" href="dist/theme/wortiz.css" id="theme">
+
+    <!-- Theme used for syntax highlighted code -->
+    <link rel="stylesheet" href="plugin/highlight/tomorrow-night.css" id="highlight-theme">
+    <style>
+      .container{
+          display: flex;
+          align-items: center;
+      }
+      .col{
+          flex: 1;
+          padding: 0.5em;
+      }
+      .col2{
+          flex: 2;
+          padding: 0.5em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section data-markdown>
+            <script type="text/template">
+              ## Git for Goma Developers
+              ### Weston Ortiz
+            </script>
+        </section>
+        <section data-markdown>
+          ### Version Control and Git
+        </section>
+        <section data-markdown>
+          ### What is Version Control?
+          
+          Version control is just a way of maintaining a history of files
+          
+          We've all done the dumb version:
+          
+            - `Important_Paper.docx`
+            - `Important_Paper_revision_1.docx`
+            - `Important_Paper_revision_2.docx`
+            - `Important_Paper_new_revision.docx`
+            - etc...
+
+        </section>
+        <section data-markdown>
+          ### How about a Version Control System (VCS)
+          
+          A version control system (VCS) is something that automates this history
+          tracking for us
+          
+          Microsoft Office tools have change tracking and compare built in
+          Various tools have been made for managing revisions for code
+          
+          One of the more popular VCSs for development is *Git*
+          
+          Others CVS, SVN, Mercurial, Fossil, many more.
+        </section>
+        <section>
+          <h3>What is Git</h3>
+          
+          <div class="container">
+            <div class="col">
+              <img data-src="./images/git-logo.png" />
+            </div>
+            <div class="col2">
+          
+              <p>Git is a distributed version control system for tracking
+                changes in source code</p>
+
+              <p>Free and Open Source </p>
+
+              <p>Very popular due in part to the popularity of Github</p>
+            </div>
+          </div>
+
+        </section>
+        <section>
+          <h3>Central vs. Distributed</h3>
+          <div class="container">
+            <div class="col">
+              <h4>Centralized</h4>
+              <img data-src="./images/central_vcs.svg" />
+              <div class="center-align">
+                <p>CVS, SVN</p>
+              </div>
+            </div>
+            <div class="col">
+              <h4>Distributed</h4>
+              <img data-src="./images/dist_vcs.svg" />
+              <div class="center-align">
+                <p>Git, Mercurial, Fossil</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h4>Git Workflow</h4>
+          <div class="container">
+            <div class="col">
+            <p><img data-src="./images/lifecycle.png" /></p>
+            <p style="font-size: 0.4em;"><a href="https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository">From Pro Git book</a></p>  
+            </div>
+          </div>
+        </section>
+        <section>
+          <h4>Git Branches</h4>
+          <div class="container">
+            <div class="col">
+            <p><img data-src="./images/branches.png" /></p>
+            <p style="font-size: 0.4em;"><a href="https://git-scm.com/book/en/v2/Git-Branching-Branching-Workflows">From Pro Git book</a></p>  
+            </div>
+          </div>
+        </section>
+        <section>
+          <h4>How git stores files</h4>
+          <div class="container">
+            <div class="col">
+            <p><img data-src="./images/snapshot.png" /></p>
+            <p style="font-size: 0.4em;"><a href="https://stackoverflow.com/questions/8198105/how-does-git-store-files">From Pro Git book</a></p>  
+            </div>
+            <div class="col">
+              <p>Most important to note that git stores snapshots not deltas<p>
+              <p>Makes git unsuitable for large binary files<p>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h2>Git Commands: Basic usage</h2>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git init</code></h4>
+
+          <p>We can make any folder into a git repository, we just run the initialize command</p>
+
+          <pre><code data-trim data-noescape class="shell">
+              $ git init # make a git repo
+          </code></pre>
+
+          <p>This will create a <code class="color-blue">.git/</code> folder that stores the repository,
+            doing so lets us use all the features of git for that folder.</p>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git status</code></h4>
+
+          <p>
+            The <code class="color-maroon">git status</code> command will let
+            us check the current status of the repository, whether things have
+            changed, if we have staged changes, what branch we are on, etc...
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+              $ git status
+          </code></pre>
+
+          <p>
+            Important things to take note of are <b>untracked</b> files,
+            <b>modified</b> files, and <b>staged</b> files (files to be
+            committed).
+          </p>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git add</code></h4>
+          <p>When we want to stage files for a commit we use the command <code class="color-maroon">git add</code></p>
+
+          <p>We can create an empty file</p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ touch README
+          </code></pre>
+
+          <p>
+            Then add it to our empty repository
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git add README
+          </code></pre>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git commit</code></h4>
+
+          <p>
+            To save our changes in the staged state we need to commit them to
+            the repository with <code class="color-maroon">git commit</code>
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git commit
+          </code></pre>
+
+          <p>
+            This will open our default text editor defined by
+            <code>$EDITOR</code> or <code>$VISUAL </code> environment variables
+          </p>
+
+          <p>
+            In this file we write our commit message and save and close the
+            file for the commit to happen.
+          </p>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git log</code></h4>
+          <p>
+            We can view the history with 
+            <code class="color-maroon">git log</code> command
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git log
+            
+            commit 2cfd7c59bf4fcf9ed0d4d198c1f81903fc47ea63 (HEAD -> master, origin/master, origin/HEAD)
+            Author: Weston Ortiz <weston@wortiz.com>
+            Date:   Tue Jul 21 13:07:30 2020 -0600
+        
+            Add Saramito model to stress_developed, fix Jacobians, add some Saramito Post Procs (#304)
+          </code></pre>
+        
+          <p>
+            The commit hash has an important roll of being a unique identifier
+            for a commit.
+          </p>
+        </section>
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git diff</code></h4>
+
+          <p>
+            To see what changes we have made to the current state of the repository
+            we can use the <code class="color-maroon">git diff</code> command.
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git diff
+            $ git diff --cached  # only show staged changes
+          </code></pre>
+
+          <p>
+            We can also compare to other branches and commits
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git diff <branch name>
+            $ git diff 2cfd7c59
+          </code></pre>
+
+        </section>
+
+        <section>  
+          <h2>Git Commands: Branching and State<h2>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git branch</code>(1/3)</h4>
+          <p>
+            We can list available branches and create branches using the
+            <code class="color-maroon">git branch</code> command
+          </p>
+           
+          <p>List branches (current branch will be marked)</p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git branch
+          </code></pre>
+
+          <p>
+            Create a branch
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git branch new_branch
+          </code></pre>
+
+        </section>
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git checkout</code>(1/3)</h4>
+          <p>
+            We can access different repository states with the 
+            <code class="color-maroon">git checkout</code> command
+          </p>
+
+          <p>
+            Set state to a commit (hash only has to be long enough to be unique)
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git checkout 2cfd7c59
+          </code></pre>
+
+          <p>
+            Switch to a branch (branch must exist)
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git checkout develop
+          </code></pre>
+
+        </section>
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git checkout</code> (2/3)</h4>
+          <p>
+            Use a shortcut to both create and switch to a new branch
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git checkout -b fixing_bug_21
+          </code></pre>
+        </section>
+
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git checkout</code> (3/3)</h4>
+
+          <p>
+            Use the <code class="color-maroon">git checkout</code>
+            command to get files at a specified state
+          </p>
+
+          <p>
+            Reset the README to the value in commit <code>2cfd7c59</code>
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git checkout 2cfd7c59 -- README
+          </code></pre>
+
+          <p>
+            Reset folder src to the value in develop branch
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git checkout develop -- src/
+          </code></pre>
+        </section>
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git merge</code></h4>
+
+          <p>
+            In order to combine state the 
+            <code class="color-maroon">git merge</code> command is used
+          </p>
+
+          <p>
+            Merge a local branch with your branch
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git merge other-branch
+          </code></pre>
+        </section>
+        <section>
+          <h2>Git Commands: Working with Remotes</h2>
+        </section>
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git remote</code>(1/2)</h4>
+
+          <p>
+            Remotes are other copies of the repository, they can be
+            folders, a folder accessible by ssh,
+            a server running a git compatible protocol
+          </p>
+          <p>
+            List remotes
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git remote -v
+          </code></pre>
+
+          <p>Add a new remote or remove a remote</p>
+          <pre><code data-trim data-noescape class="shell">
+            $ git remote add &lt;name&gt; &lt;url&gt;
+            $ git remote rm &lt;name&gt;
+          </code></pre>
+        </section>
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git branch</code></h4>
+
+          <p>
+            You can also list remote branches
+          </p>
+
+          <pre><code data-trim data-noescape class="shell">
+            $ git branch -r
+          </code></pre>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git fetch</code></h4>
+
+          <p>
+            Update your repository with the current state of the remote
+            using the <code class="color-maroon">git fetch</code> command
+          </p>
+          <pre><code data-trim data-noescape class="shell">
+            $ git fetch &lt;remote&gt;
+          </code></pre>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git merge</code> (remote)</h4>
+
+          <p>
+            After a git fetch often you'll want to update a local branch
+            with the remote's commits
+          </p>
+          <pre><code data-trim data-noescape class="shell">
+            $ git merge &lt;remote&gt;/&lt;remote_branch&gt;
+          </code></pre>
+        </section>
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git pull</code></h4>
+
+          <p>
+            If you are on the branch with the same name as the remote branch you want to merge
+            you can combine the fetch and merge into one command
+          </p>
+          <pre><code data-trim data-noescape class="shell">
+            $ git pull &lt;remote&gt;
+          </code></pre>
+        </section>
+
+        <section>  
+          <h4>Git Commands: <code class="color-maroon">git push</code></h4>
+
+          <p>
+            When you want to update remote repositories with your commits 
+            you can use the <code class="color-maroon">git push</code> command
+          </p>
+          <p>
+            Push the current branch to a remote branch
+          <pre><code data-trim data-noescape class="shell">
+            $ git push &lt;remote&gt; &lt;remote branch&gt;
+          </code></pre>
+        </section>
+        <section>  
+          <h2>Recommended Resources</h2>
+        </section>
+        <section>  
+          <h4>Recommended Resources</h4>
+          <p> Main git website, contains documentation and the <i>Pro Git</i> book (<a href="https://git-scm.com/">https://git-scm.com/</a>)</p>
+          <p> Github guides, contains guides for working with git and Github (<a href="https://guides.github.com/">https://guides.github.com/</a>)</p>
+
+        </section>
+      </div>
+    </div>
+
+    <script src="dist/reveal.js"></script>
+    <script src="plugin/notes/notes.js"></script>
+    <script src="plugin/markdown/markdown.js"></script>
+    <script src="plugin/highlight/highlight.js"></script>
+    <script src="plugin/math/math.js"></script>
+    <script>
+      // More info about initialization & config:
+      // - https://revealjs.com/initialization/
+      // - https://revealjs.com/config/
+      Reveal.initialize({
+        hash: true,
+        slideNumber: true,
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/gh/mathjax/mathjax@2.7.8/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          // pass other options into `MathJax.Hub.Config()`
+          TeX: { Macros: { RR: "{\\bf R}" } }
+        },
+
+        // Learn about plugins: https://revealjs.com/plugins/
+        plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+      });
+    </script>
+  </body>
+</html>
